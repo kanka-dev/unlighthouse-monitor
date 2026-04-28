@@ -6,6 +6,8 @@ Scheduled, multi-site [Unlighthouse](https://unlighthouse.dev/) scans with persi
 
 Ideal use case: monitor performance/SEO/a11y of a handful of production websites you maintain (e.g. client sites), get alerted when scores drop below your thresholds.
 
+![Dashboard](docs/unlighthouse-monitor-dashboard-example.png)
+
 ## Features
 
 - **Cron-driven** (default: Mon + Thu 03:00) via `supercronic`
@@ -152,6 +154,8 @@ Pick **one** of the example overrides (see _Quick start_ above) and copy it to `
 ## Mattermost notifications
 
 After every run, one summary message is posted. If any threshold is breached, an alert emoji and a details block listing the violations are added, with a deep link to the full HTML report per affected site.
+
+![Mattermost notification](docs/unlighthouse-monitor-mattermost-example.png)
 
 Disable notifications by leaving `MATTERMOST_WEBHOOK_URL` empty in `.env`.
 
