@@ -1,7 +1,7 @@
 FROM node:20-alpine
 
-# System-Dependencies: Chromium (von unlighthouse via Puppeteer genutzt),
-# plus Build-Tools für native Module, tini als Init, tzdata für Cron-Zeitzone.
+# System dependencies: Chromium (used by Unlighthouse via Puppeteer),
+# build tools for native modules, tini as init, tzdata for cron timezone.
 RUN apk add --no-cache \
       chromium \
       nss \
@@ -34,7 +34,7 @@ ENV PUPPETEER_SKIP_CHROMIUM_DOWNLOAD=true \
 
 WORKDIR /app
 
-# JS-Abhängigkeiten für unsere eigenen Skripte (YAML-Parser)
+# JS dependencies for our own scripts (YAML parser)
 COPY scripts/package.json scripts/package-lock.json* /app/scripts/
 RUN cd /app/scripts && npm install --omit=dev && npm cache clean --force
 

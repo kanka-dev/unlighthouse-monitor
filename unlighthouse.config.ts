@@ -1,11 +1,11 @@
-// Globale Unlighthouse-Konfiguration für den Docker-Runner.
-// Per-Site Optionen (mobile, i18n, ...) werden in run-all.js als CLI-Flags übergeben.
+// Global Unlighthouse configuration for the Docker runner.
+// Per-site options (mobile, i18n, ...) are passed as CLI flags from run-all.js.
 //
-// Flags angelehnt an die offizielle Docker-Empfehlung:
+// Flags inspired by the official Docker recipe:
 // https://unlighthouse.dev/guide/guides/docker
 //
-// Hinweis: Wir verzichten bewusst auf `defineUnlighthouseConfig`, weil das den
-// Import des vollen `unlighthouse`-Pakets erfordern würde. Plain-Object reicht.
+// Note: we intentionally skip `defineUnlighthouseConfig` because that would
+// require importing the full `unlighthouse` package. A plain object is enough.
 export default {
   puppeteerOptions: {
     headless: true,
@@ -23,12 +23,12 @@ export default {
   ci: {
     buildStatic: true,
   },
-  // Begrenze parallele Chrome-Instanzen, sonst OOM/TARGET_CRASHED bei größeren Sites.
-  // 2 ist konservativ und stabil bei 4 GB Container-Memory.
+  // Limit concurrent Chrome instances; otherwise OOM/TARGET_CRASHED on larger sites.
+  // 2 is conservative and stable with 4 GB container memory.
   puppeteerClusterOptions: {
     maxConcurrency: 2,
   },
-  // Lighthouse selbst nicht zu aggressiv parallelisieren.
+  // Categories Lighthouse should report on (drops PWA which is mostly noise).
   lighthouseOptions: {
     onlyCategories: ["performance", "accessibility", "best-practices", "seo"],
   },

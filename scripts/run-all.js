@@ -1,12 +1,12 @@
 #!/usr/bin/env node
 /**
- * Unlighthouse Orchestrator
+ * Unlighthouse orchestrator
  *
- * - Liest sites.yml
- * - Führt unlighthouse-ci pro Site aus (build-static = HTML-Reports)
- * - Aktualisiert den "latest"-Symlink je Site
- * - Baut anschließend das Index-Dashboard
- * - Sendet Mattermost-Notification
+ * - Reads sites.yml
+ * - Runs unlighthouse-ci per site (build-static = HTML reports)
+ * - Updates the per-site "latest" symlink
+ * - Builds the index dashboard afterwards
+ * - Sends a Mattermost notification
  */
 
 const fs = require("fs");
@@ -57,13 +57,13 @@ function runSite(site, dateStr) {
   log(`=== ${site.name} (${site.url}) -> ${outDir}`);
 
   const args = buildArgs(site);
-  // unlighthouse-ci schreibt in <cwd>/.unlighthouse per default.
-  // Wir führen es direkt im Zielordner aus und verschieben danach .unlighthouse/* heraus.
+  // unlighthouse-ci writes to <cwd>/.unlighthouse by default.
+  // We run it inside the target dir and then move .unlighthouse/* out.
   const res = spawnSync("unlighthouse-ci", args, {
     cwd: outDir,
     env: { ...process.env, UNLIGHTHOUSE_CONFIG_FILE: CONFIG_FILE },
     stdio: "inherit",
-    timeout: 30 * 60 * 1000, // 30min Hard-Timeout pro Site
+    timeout: 30 * 60 * 1000, // 30 min hard timeout per site
   });
 
   if (res.error) {
@@ -71,12 +71,13 @@ function runSite(site, dateStr) {
     return { site, safe, outDir, ok: false, error: res.error.message };
   }
   if (res.status !== 0) {
-    // unlighthouse-ci exitet mit !=0 wenn Budget nicht eingehalten wird.
-    // Das ist für uns kein harter Fehler — Reports sind trotzdem da.
-    log(`  unlighthouse-ci exited with code ${res.status} (ggf. Budget-Verletzung)`);
+    // unlighthouse-ci exits non-zero when a budget is missed.
+    // That's not a hard error here — the reports are still produced.
+    log(`  unlighthouse-ci exited with code ${res.status} (likely a budget breach)`);
   }
 
-  // .unlighthouse/ Inhalt nach outDir hochziehen, damit die URL /<slug>/<datum>/ direkt auf index.html zeigt
+  // Move contents of .unlighthouse/ up into outDir so the URL
+  // /<slug>/<date>/ points directly to index.html.
   const ulDir = path.join(outDir, ".unlighthouse");
   if (fs.existsSync(ulDir)) {
     for (const entry of fs.readdirSync(ulDir)) {

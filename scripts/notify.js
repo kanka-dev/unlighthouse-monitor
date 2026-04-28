@@ -1,10 +1,10 @@
 #!/usr/bin/env node
 /**
- * Mattermost-Notification nach einem Run.
+ * Mattermost notification after a run.
  *
- * Modus: "immer Summary + Detail bei Breach".
- * - Postet pro Run eine Markdown-Tabelle mit allen Sites und Scores.
- * - Bei Threshold-Unterschreitung: Alert-Emoji + Detail-Block mit den Verstößen.
+ * Mode: "always summary, details on breach".
+ * - Posts a Markdown table per run with all sites and their scores.
+ * - On threshold breach: alert emoji + details block listing the violations.
  */
 
 const fs = require("fs");
@@ -79,7 +79,7 @@ async function main() {
 
     if (!fs.existsSync(ciPath)) {
       rows.push({ name: site.name, url: site.url, failed: true });
-      breaches.push(`**${site.name}** — ❌ kein Report erzeugt (Scan fehlgeschlagen?)`);
+      breaches.push(`**${site.name}** — ❌ no report produced (scan failed?)`);
       continue;
     }
     const ci = JSON.parse(fs.readFileSync(ciPath, "utf8"));
@@ -125,7 +125,7 @@ async function main() {
   let text = header + "\n\n" + table.join("\n");
   text += `\n\n📊 [Dashboard](${PUBLIC_URL}/)`;
   if (breaches.length) {
-    text += "\n\n---\n#### ⚠️ Threshold-Verletzungen\n\n" + breaches.join("\n\n");
+    text += "\n\n---\n#### ⚠️ Threshold breaches\n\n" + breaches.join("\n\n");
   }
 
   const body = {

@@ -18,9 +18,9 @@ services:
       - ./sites.yml:/app/sites.yml:ro
       - ./crontab:/app/crontab:ro
       - ./reports:/reports
-      # Scripts + Config als Volume -> Änderungen sofort wirksam ohne Image-Rebuild.
-      # node_modules bleibt aus dem Image erhalten (anonymous volume), sonst
-      # fehlt js-yaml zur Laufzeit.
+      # Scripts + config mounted as volumes -> changes are picked up without
+      # an image rebuild. node_modules is preserved from the image via an
+      # anonymous volume, otherwise js-yaml would be missing at runtime.
       - ./scripts:/app/scripts
       - /app/scripts/node_modules
       - ./unlighthouse.config.ts:/app/unlighthouse.config.ts:ro
@@ -28,7 +28,7 @@ services:
     security_opt:
       - no-new-privileges:true
 
-    # Chromium braucht SHM, sonst bricht er ab.
+    # Chromium needs sufficient SHM or it crashes.
     shm_size: "2gb"
 
     deploy:

@@ -39,9 +39,9 @@ function aggregateScores(ci) {
   const pages = Array.isArray(ci) ? ci : ci?.reports || [];
   for (const page of pages) {
     for (const c of CATEGORIES) {
-      // unlighthouse ci-result.json hat flaches Format: page.performance, page.seo, ...
+      // unlighthouse ci-result.json has a flat format: page.performance, page.seo, ...
       let v = page?.[c];
-      // Fallback für lighthouse-natives Format mit categories
+      // Fallback for lighthouse's native nested format
       if (typeof v !== "number") v = page?.categories?.[c]?.score;
       if (typeof v === "number") buckets[c].push(Math.round(v * 100));
     }
@@ -71,7 +71,7 @@ function badge(score, threshold, worst) {
   const val = score == null ? "—" : score;
   const main = `<span class="badge" style="background:${color(score, threshold)}">${val}</span>`;
   if (worst != null && worst !== score) {
-    return `${main}<div class="worst" title="Schlechteste Einzelseite">min ${worst}</div>`;
+    return `${main}<div class="worst" title="Worst single page">min ${worst}</div>`;
   }
   return main;
 }
@@ -94,7 +94,7 @@ const EXTERNAL_ICON = `<svg xmlns="http://www.w3.org/2000/svg" width="12" height
 
 function siteCell(site) {
   const ext = externalUrl(site.url);
-  return `<span class="site-name">${esc(site.name)}<a class="ext" href="${esc(ext)}" target="_blank" rel="noopener noreferrer" title="${esc(ext)} im neuen Tab öffnen" aria-label="Site öffnen">${EXTERNAL_ICON}</a></span><span class="site-url">${esc(site.url)}</span>`;
+  return `<span class="site-name">${esc(site.name)}<a class="ext" href="${esc(ext)}" target="_blank" rel="noopener noreferrer" title="Open ${esc(ext)} in a new tab" aria-label="Open site">${EXTERNAL_ICON}</a></span><span class="site-url">${esc(site.url)}</span>`;
 }
 
 function buildRow(site) {
@@ -188,7 +188,7 @@ function render(rows) {
     if (!r.latest) {
       body += `<tr>
         <td>${siteCell(r.site)}</td>
-        <td colspan="6" class="muted">Noch keine Daten — nächster Run folgt laut Cron</td>
+        <td colspan="6" class="muted">No data yet — next scan follows the cron schedule</td>
       </tr>`;
       continue;
     }
@@ -207,7 +207,7 @@ function render(rows) {
       <td>${badge(a.accessibility, get("accessibility"), m.accessibility)}</td>
       <td>${badge(a["best-practices"], get("best-practices"), m["best-practices"])}</td>
       <td>${badge(a.seo, get("seo"), m.seo)}</td>
-      <td><a href="./${esc(r.safe)}/latest/">Öffnen →</a>${history}</td>
+      <td><a href="./${esc(r.safe)}/latest/">Open →</a>${history}</td>
     </tr>`;
   }
 

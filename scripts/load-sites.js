@@ -1,6 +1,6 @@
 /**
- * Lädt sites.yml und mergt globale `defaults` in jede Site.
- * Per-Site-Werte überschreiben Defaults (shallow merge auf thresholds + options).
+ * Loads sites.yml and merges global `defaults` into each site.
+ * Per-site values override defaults (shallow merge on thresholds + options).
  */
 
 const fs = require("fs");
