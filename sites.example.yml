@@ -1,0 +1,37 @@
+# Unlighthouse - Sites configuration
+#
+# Each site is scanned according to the schedule in `crontab`.
+# Results are written to reports/<slug>/<date>/
+#
+# Slug = lowercase name with non-alphanumeric chars replaced by '-'.
+# (e.g. "example.com" -> "example-com")
+#
+# Global `defaults` apply to ALL sites. Per-site values override them
+# (shallow merge on `thresholds` and `options`).
+
+defaults:
+  thresholds:
+    performance: 80
+    seo: 90
+    accessibility: 90
+    best-practices: 85
+  options:
+    mobile: true
+
+sites:
+  # Inherits all defaults
+  - name: example.com
+    url: example.com
+
+  # Multilingual site -> scan all language pages
+  - name: i18n-example.com
+    url: i18n-example.com
+    options:
+      enableI18nPages: true
+
+  # Heavy site -> lower performance threshold, but stricter SEO
+  - name: heavy-example.com
+    url: heavy-example.com
+    thresholds:
+      performance: 60
+      seo: 95

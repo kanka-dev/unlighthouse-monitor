@@ -1,0 +1,6 @@
+# Unlighthouse Scan-Zeitplan
+# Format: m h dom mon dow command
+# Zeitzone: Europe/Berlin (aus docker-compose env)
+#
+# Montag + Donnerstag um 03:00
+0 3 * * 1,4 /app/scripts/run-all.js

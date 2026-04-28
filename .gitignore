@@ -1,0 +1,19 @@
+# Secrets
+.env
+
+# User-specific configuration (contains customer URLs and personal stack details)
+sites.yml
+docker-compose.override.yml
+
+# Generated content (performance data of monitored sites)
+reports/
+!reports/.gitkeep
+
+# Node
+node_modules/
+
+# OS / editors
+.DS_Store
+*.swp
+.idea/
+.vscode/

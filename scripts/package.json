@@ -1,0 +1,9 @@
+{
+  "name": "unlighthouse-runner-scripts",
+  "version": "1.0.0",
+  "private": true,
+  "type": "commonjs",
+  "dependencies": {
+    "js-yaml": "^4.1.0"
+  }
+}

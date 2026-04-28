@@ -1,0 +1,12 @@
+# Example: expose the dashboard directly on a host port (no reverse proxy).
+#
+# Usage:
+#   cp docker-compose.override.example.yml docker-compose.override.yml
+#   # then `docker compose up -d`
+#
+# The dashboard will be reachable at http://localhost:8080
+
+services:
+  unlighthouse-web:
+    ports:
+      - "8080:80"

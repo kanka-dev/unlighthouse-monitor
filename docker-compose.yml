@@ -1,0 +1,67 @@
+services:
+
+  unlighthouse-runner:
+    build: .
+    image: unlighthouse-runner:local
+    pull_policy: build
+    container_name: unlighthouse-runner
+    restart: unless-stopped
+
+    environment:
+      - TZ=${TZ:-UTC}
+      - REPORTS_DIR=/reports
+      - SITES_FILE=/app/sites.yml
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:8080}
+      - MATTERMOST_WEBHOOK_URL=${MATTERMOST_WEBHOOK_URL:-}
+
+    volumes:
+      - ./sites.yml:/app/sites.yml:ro
+      - ./crontab:/app/crontab:ro
+      - ./reports:/reports
+      # Scripts + Config als Volume -> Änderungen sofort wirksam ohne Image-Rebuild.
+      # node_modules bleibt aus dem Image erhalten (anonymous volume), sonst
+      # fehlt js-yaml zur Laufzeit.
+      - ./scripts:/app/scripts
+      - /app/scripts/node_modules
+      - ./unlighthouse.config.ts:/app/unlighthouse.config.ts:ro
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Chromium braucht SHM, sonst bricht er ab.
+    shm_size: "2gb"
+
+    deploy:
+      resources:
+        limits:
+          cpus: "3.0"
+          memory: 4G
+        reservations:
+          memory: 512M
+
+  unlighthouse-web:
+    image: nginx:alpine
+    container_name: unlighthouse-web
+    restart: unless-stopped
+
+    depends_on:
+      - unlighthouse-runner
+
+    volumes:
+      - ./reports:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/conf.d/default.conf:ro
+
+    security_opt:
+      - no-new-privileges:true
+
+    deploy:
+      resources:
+        limits:
+          cpus: "0.5"
+          memory: 128M
+
+    # NOTE: This service has neither `ports` nor `networks/labels` for a reverse
+    # proxy. Pick ONE of the two example overrides to make the dashboard reachable:
+    #   - docker-compose.override.example.yml     (direct port 8080)
+    #   - docker-compose.traefik.example.yml      (Traefik integration)
+    # Copy your choice to docker-compose.override.yml and adapt it.

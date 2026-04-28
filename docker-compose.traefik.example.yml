@@ -1,0 +1,36 @@
+# Example: integrate the dashboard with Traefik + (optional) Authentik / CrowdSec.
+#
+# Usage:
+#   cp docker-compose.traefik.example.yml docker-compose.override.yml
+#   # adapt the Host() rule, certresolver, middlewares, network name to your setup
+#   # then `docker compose up -d`
+#
+# Required:
+#   - An external Docker network that Traefik watches (default name: traefik_frontend)
+#   - PUBLIC_URL set in .env to match the Host() rule
+
+services:
+  unlighthouse-web:
+    networks:
+      - traefik_frontend
+    labels:
+      - "traefik.enable=true"
+
+      # === Domain / Routing ===
+      - "traefik.http.routers.unlighthouse.rule=Host(`unlighthouse.example.com`)"
+      - "traefik.http.routers.unlighthouse.entrypoints=websecure"
+      - "traefik.http.services.unlighthouse.loadbalancer.server.port=80"
+
+      # === TLS (adapt to your Traefik certresolver) ===
+      - "traefik.http.routers.unlighthouse.tls=true"
+      - "traefik.http.routers.unlighthouse.tls.certresolver=letsencrypt"
+
+      # === Middlewares (optional, adapt to your stack) ===
+      # Examples for SSO via Authentik (forward-auth) and CrowdSec bouncer:
+      # - "traefik.http.routers.unlighthouse.middlewares=secure-headers@file,crowdsec@file,authentik@file"
+
+      - "traefik.docker.network=traefik_frontend"
+
+networks:
+  traefik_frontend:
+    external: true
