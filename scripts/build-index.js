@@ -1,9 +1,9 @@
 #!/usr/bin/env node
 /**
- * Baut ein statisches Dashboard unter <REPORTS_DIR>/index.html
- * - Liest sites.yml
- * - Sammelt je Site alle Datums-Ordner und den neuesten Score
- * - Rendert eine Tabelle mit Badges + Links zu latest / History
+ * Builds a static dashboard at <REPORTS_DIR>/index.html
+ * - Reads sites.yml
+ * - Collects all date folders per site and the latest score
+ * - Renders a table with badges + links to latest / history
  */
 
 const fs = require("fs");
@@ -118,7 +118,7 @@ function buildRow(site) {
 }
 
 function render(rows) {
-  const generatedAt = new Date().toLocaleString("de-DE", { timeZone: "Europe/Berlin" });
+  const generatedAt = new Date().toISOString().replace("T", " ").slice(0, 16) + " UTC";
 
   const head = `<!doctype html>
 <html lang="de">
@@ -159,12 +159,12 @@ function render(rows) {
 <body>
 <div class="wrap">
   <h1>🔦 Unlighthouse Dashboard</h1>
-  <div class="muted">Zuletzt gebaut: ${esc(generatedAt)} &middot; ${rows.length} Site(s)</div>
+  <div class="muted">Last built: ${esc(generatedAt)} &middot; ${rows.length} site(s)</div>
   <div class="legend">
-    <span><span class="dot" style="background:#16a34a"></span>&ge; Threshold</span>
-    <span><span class="dot" style="background:#eab308"></span>&ge; Threshold &minus; 10</span>
-    <span><span class="dot" style="background:#dc2626"></span>unter Threshold</span>
-    <span><span class="dot" style="background:#6b7280"></span>keine Daten</span>
+    <span><span class="dot" style="background:#16a34a"></span>&ge; threshold</span>
+    <span><span class="dot" style="background:#eab308"></span>&ge; threshold &minus; 10</span>
+    <span><span class="dot" style="background:#dc2626"></span>below threshold</span>
+    <span><span class="dot" style="background:#6b7280"></span>no data</span>
   </div>
   <table>
     <thead>
