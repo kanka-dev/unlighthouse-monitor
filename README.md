@@ -227,6 +227,33 @@ Add to `crontab` for automatic cleanup if desired.
 | `example.com` | `example-com` | `<PUBLIC_URL>/example-com/latest/` |
 | `My Site` | `my-site` | `<PUBLIC_URL>/my-site/latest/` |
 
+## Demo / preview
+
+To preview what the dashboard and Mattermost notification look like with **anonymized sample data** (no real scans, no Chromium needed):
+
+```bash
+# 1. Generate fake reports for 7 example sites × 4 dates
+docker compose exec unlighthouse-runner node /app/scripts/generate-demo.js
+docker compose cp unlighthouse-runner:/app/demo ./demo
+
+# 2. Open the dashboard
+xdg-open ./demo/reports/index.html       # Linux
+open ./demo/reports/index.html           # macOS
+# or serve it: cd demo/reports && python3 -m http.server 8000
+
+# 3. Preview the Mattermost message (dry-run, no webhook needed)
+docker compose exec \
+  -e DRY_RUN=1 \
+  -e REPORTS_DIR=/app/demo/reports \
+  -e SITES_FILE=/app/demo/sites.yml \
+  -e PUBLIC_URL=https://unlighthouse.example.com \
+  unlighthouse-runner /app/scripts/notify.js
+```
+
+The demo includes sites in different score profiles (great, good, performance issues, threshold breaches) so you can see all visual states at once.
+
+`./demo/` is gitignored; regenerate any time.
+
 ## Acknowledgements
 
 Built on top of the excellent [Unlighthouse](https://unlighthouse.dev/) by [Harlan Wilton](https://github.com/harlan-zw). This project is just orchestration glue around it.

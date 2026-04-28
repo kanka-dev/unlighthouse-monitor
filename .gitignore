@@ -9,6 +9,9 @@ docker-compose.override.yml
 reports/
 !reports/.gitkeep
 
+# Demo data (anonymized previews, regenerated on demand)
+demo/
+
 # Node
 node_modules/
 

@@ -15,8 +15,9 @@ const REPORTS_DIR = process.env.REPORTS_DIR || "/reports";
 const SITES_FILE = process.env.SITES_FILE || "/app/sites.yml";
 const WEBHOOK = process.env.MATTERMOST_WEBHOOK_URL;
 const PUBLIC_URL = (process.env.PUBLIC_URL || "http://localhost").replace(/\/$/, "");
+const DRY_RUN = process.env.DRY_RUN === "1" || process.argv.includes("--dry-run");
 
-if (!WEBHOOK) {
+if (!WEBHOOK && !DRY_RUN) {
   console.error("[notify] MATTERMOST_WEBHOOK_URL not set — skipping");
   process.exit(0);
 }
@@ -132,6 +133,13 @@ async function main() {
     icon_emoji: hasIssue ? ":rotating_light:" : ":flashlight:",
     text,
   };
+
+  if (DRY_RUN) {
+    console.log("=== DRY RUN — would post to Mattermost: ===\n");
+    console.log(text);
+    console.log("\n=== (icon: " + body.icon_emoji + ", username: " + body.username + ") ===");
+    return;
+  }
 
   try {
     const res = await fetch(WEBHOOK, {
