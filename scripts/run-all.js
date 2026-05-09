@@ -18,6 +18,64 @@ const REPORTS_DIR = process.env.REPORTS_DIR || "/reports";
 const SITES_FILE = process.env.SITES_FILE || "/app/sites.yml";
 const CONFIG_FILE = process.env.UNLIGHTHOUSE_CONFIG || "/app/unlighthouse.config.ts";
 
+const LOCK_FILE = path.join(REPORTS_DIR, ".run.lock");
+const STATUS_FILE = path.join(REPORTS_DIR, ".run.status.json");
+// A run that's been "running" longer than this is considered crashed and the
+// lock is reclaimed. Cap is generous: each site has a 30 min timeout.
+const STALE_LOCK_MS = 6 * 60 * 60 * 1000; // 6h
+
+function parseArgs(argv) {
+  const out = { site: null };
+  for (let i = 0; i < argv.length; i++) {
+    const a = argv[i];
+    if (a === "--site") {
+      out.site = argv[++i];
+    } else if (a.startsWith("--site=")) {
+      out.site = a.slice("--site=".length);
+    }
+  }
+  return out;
+}
+
+function writeStatus(payload) {
+  try {
+    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+    fs.writeFileSync(STATUS_FILE, JSON.stringify(payload, null, 2));
+  } catch (e) {
+    log(`status write failed: ${e.message}`);
+  }
+}
+
+function acquireLock(scope) {
+  fs.mkdirSync(REPORTS_DIR, { recursive: true });
+  const meta = { pid: process.pid, scope, startedAt: new Date().toISOString() };
+  try {
+    const fd = fs.openSync(LOCK_FILE, "wx");
+    fs.writeSync(fd, JSON.stringify(meta));
+    fs.closeSync(fd);
+    return true;
+  } catch (e) {
+    if (e.code !== "EEXIST") throw e;
+    // Stale-lock recovery based on mtime (PID-based check is unreliable
+    // across containers that share the bind-mount).
+    try {
+      const age = Date.now() - fs.statSync(LOCK_FILE).mtimeMs;
+      if (age > STALE_LOCK_MS) {
+        log(`stale lock (age ${(age / 60000).toFixed(0)} min) — reclaiming`);
+        fs.unlinkSync(LOCK_FILE);
+        return acquireLock(scope);
+      }
+    } catch (_) {}
+    return false;
+  }
+}
+
+function releaseLock() {
+  try {
+    fs.unlinkSync(LOCK_FILE);
+  } catch (_) {}
+}
+
 function slugify(s) {
   return String(s)
     .toLowerCase()
@@ -115,41 +173,88 @@ function main() {
     console.error(`sites.yml not found at ${SITES_FILE}`);
     process.exit(1);
   }
-  const sites = loadSites(SITES_FILE);
+  const args = parseArgs(process.argv.slice(2));
+  let sites = loadSites(SITES_FILE);
   if (sites.length === 0) {
     console.error("No sites configured.");
     process.exit(1);
   }
 
-  fs.mkdirSync(REPORTS_DIR, { recursive: true });
-  const dateStr = today();
-  log(`Starting run for ${sites.length} site(s), date=${dateStr}`);
-
-  const results = [];
-  for (const site of sites) {
-    try {
-      results.push(runSite(site, dateStr));
-    } catch (e) {
-      log(`  runSite threw: ${e.message}`);
-      results.push({ site, safe: slugify(site.name), ok: false, error: e.message });
+  if (args.site) {
+    const wanted = String(args.site).toLowerCase();
+    const filtered = sites.filter(
+      (s) => slugify(s.name) === wanted || s.name === args.site
+    );
+    if (filtered.length === 0) {
+      console.error(`No site matches "${args.site}". Use the slug from sites.yml.`);
+      process.exit(1);
     }
+    sites = filtered;
   }
 
-  // Index bauen
+  const scope = args.site ? slugify(sites[0].name) : "all";
+  if (!acquireLock(scope)) {
+    console.error("Another run is already in progress (lock held). Aborting.");
+    process.exit(2);
+  }
+
+  const startedAt = new Date().toISOString();
+  writeStatus({ state: "running", scope, sites: sites.length, startedAt });
+
+  let exitCode = 0;
   try {
-    require("./build-index.js");
-  } catch (e) {
-    log(`build-index failed: ${e.message}`);
-  }
+    fs.mkdirSync(REPORTS_DIR, { recursive: true });
+    const dateStr = today();
+    log(`Starting run for ${sites.length} site(s) [scope=${scope}], date=${dateStr}`);
 
-  // Mattermost
-  try {
-    require("./notify.js");
-  } catch (e) {
-    log(`notify failed: ${e.message}`);
-  }
+    const results = [];
+    for (const site of sites) {
+      try {
+        results.push(runSite(site, dateStr));
+      } catch (e) {
+        log(`  runSite threw: ${e.message}`);
+        results.push({ site, safe: slugify(site.name), ok: false, error: e.message });
+      }
+    }
 
-  log("Run complete.");
+    // Index bauen
+    try {
+      require("./build-index.js");
+    } catch (e) {
+      log(`build-index failed: ${e.message}`);
+    }
+
+    // Mattermost
+    try {
+      require("./notify.js");
+    } catch (e) {
+      log(`notify failed: ${e.message}`);
+    }
+
+    log("Run complete.");
+    writeStatus({
+      state: "idle",
+      scope,
+      sites: sites.length,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      ok: results.every((r) => r.ok),
+    });
+  } catch (e) {
+    exitCode = 1;
+    writeStatus({
+      state: "idle",
+      scope,
+      sites: sites.length,
+      startedAt,
+      finishedAt: new Date().toISOString(),
+      ok: false,
+      error: e.message,
+    });
+  } finally {
+    releaseLock();
+  }
+  process.exit(exitCode);
 }
 
 main();

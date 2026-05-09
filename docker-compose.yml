@@ -31,13 +31,74 @@ services:
     # Chromium needs sufficient SHM or it crashes.
     shm_size: "2gb"
 
+    # supercronic is the long-running PID 1 child. If it dies, the container is
+    # effectively useless (no scheduled scans). pgrep is provided by busybox.
+    healthcheck:
+      test: ["CMD-SHELL", "pgrep -f supercronic >/dev/null || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+
     deploy:
       resources:
         limits:
-          cpus: "3.0"
+          cpus: "2.0"
           memory: 4G
         reservations:
           memory: 512M
+
+  unlighthouse-api:
+    # Same image as the runner — needs Chromium because the API spawns
+    # run-all.js which executes unlighthouse-ci. The lockfile in /reports
+    # ensures cron and on-demand runs never execute in parallel.
+    build: .
+    image: unlighthouse-runner:local
+    pull_policy: build
+    container_name: unlighthouse-api
+    restart: unless-stopped
+
+    depends_on:
+      unlighthouse-runner:
+        condition: service_healthy
+
+    environment:
+      - TZ=${TZ:-UTC}
+      - REPORTS_DIR=/reports
+      - SITES_FILE=/app/sites.yml
+      - PUBLIC_URL=${PUBLIC_URL:-http://localhost:8080}
+      - MATTERMOST_WEBHOOK_URL=${MATTERMOST_WEBHOOK_URL:-}
+      - PORT=3000
+
+    volumes:
+      - ./sites.yml:/app/sites.yml:ro
+      - ./reports:/reports
+      - ./scripts:/app/scripts
+      - /app/scripts/node_modules
+      - ./unlighthouse.config.ts:/app/unlighthouse.config.ts:ro
+
+    command: ["node", "/app/scripts/api-server.js"]
+
+    security_opt:
+      - no-new-privileges:true
+
+    # Chromium needs sufficient SHM when on-demand runs fire.
+    shm_size: "2gb"
+
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1:3000/api/health || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
+
+    deploy:
+      resources:
+        limits:
+          cpus: "2.0"
+          memory: 4G
+        reservations:
+          memory: 256M
 
   unlighthouse-web:
     image: nginx:alpine
@@ -45,7 +106,10 @@ services:
     restart: unless-stopped
 
     depends_on:
-      - unlighthouse-runner
+      unlighthouse-runner:
+        condition: service_healthy
+      unlighthouse-api:
+        condition: service_healthy
 
     volumes:
       - ./reports:/usr/share/nginx/html:ro
@@ -53,6 +117,15 @@ services:
 
     security_opt:
       - no-new-privileges:true
+
+    # nginx:alpine ships busybox `wget`. We probe the dashboard index, so a
+    # missing/empty reports volume (no index.html) also surfaces as unhealthy.
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO /dev/null http://127.0.0.1/ || exit 1"]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 
     deploy:
       resources:
