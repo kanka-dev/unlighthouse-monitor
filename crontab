@@ -2,5 +2,5 @@
 # Format: m h dom mon dow command
 # Timezone: from the TZ env var (set in .env)
 #
-# Monday + Thursday at 03:00
-0 3 * * 1,4 /app/scripts/run-all.js
+# Monday at 03:00
+0 3 * * 1 /app/scripts/run-all.js

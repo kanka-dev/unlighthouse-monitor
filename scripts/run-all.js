@@ -106,6 +106,15 @@ function buildArgs(site) {
   return args;
 }
 
+function cleanupChrome() {
+  // Puppeteer sometimes leaves chromium children behind that turn into zombies.
+  // We forcefully terminate any leftover chrome/chromium processes after each run.
+  const names = ["chromium-browser", "chromium", "chrome", "chrome-headless", "chrome_crashpad"];
+  for (const name of names) {
+    spawnSync("killall", ["-9", name], { stdio: "ignore" });
+  }
+}
+
 function runSite(site, dateStr) {
   const safe = slugify(site.name);
   const outRoot = path.join(REPORTS_DIR, safe);
@@ -117,12 +126,18 @@ function runSite(site, dateStr) {
   const args = buildArgs(site);
   // unlighthouse-ci writes to <cwd>/.unlighthouse by default.
   // We run it inside the target dir and then move .unlighthouse/* out.
-  const res = spawnSync("unlighthouse-ci", args, {
-    cwd: outDir,
-    env: { ...process.env, UNLIGHTHOUSE_CONFIG_FILE: CONFIG_FILE },
-    stdio: "inherit",
-    timeout: 30 * 60 * 1000, // 30 min hard timeout per site
-  });
+  let res;
+  try {
+    res = spawnSync("unlighthouse-ci", args, {
+      cwd: outDir,
+      env: { ...process.env, UNLIGHTHOUSE_CONFIG_FILE: CONFIG_FILE },
+      stdio: "inherit",
+      timeout: 30 * 60 * 1000, // 30 min hard timeout per site
+    });
+  } finally {
+    // Always clean up chrome orphans, even if the scan timed out or crashed.
+    cleanupChrome();
+  }
 
   if (res.error) {
     log(`  ERROR spawn: ${res.error.message}`);
@@ -168,7 +183,7 @@ function runSite(site, dateStr) {
   return { site, safe, outDir, ok: res.status === 0 || res.status === 1 };
 }
 
-function main() {
+async function main() {
   if (!fs.existsSync(SITES_FILE)) {
     console.error(`sites.yml not found at ${SITES_FILE}`);
     process.exit(1);
@@ -226,7 +241,8 @@ function main() {
 
     // Mattermost
     try {
-      require("./notify.js");
+      const notify = require("./notify.js");
+      await notify.main();
     } catch (e) {
       log(`notify failed: ${e.message}`);
     }
