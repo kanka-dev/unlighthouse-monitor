@@ -1,4 +1,4 @@
-FROM node:20-alpine
+FROM node:22-alpine
 
 # System dependencies: Chromium (used by Unlighthouse via Puppeteer),
 # build tools for native modules, tini as init, tzdata for cron timezone.

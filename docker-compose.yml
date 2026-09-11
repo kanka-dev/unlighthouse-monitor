@@ -1,6 +1,8 @@
 services:
 
   unlighthouse-runner:
+    labels:
+      "wud.watch": "false"
     build: .
     image: unlighthouse-runner:local
     pull_policy: build
@@ -52,6 +54,8 @@ services:
     # Same image as the runner — needs Chromium because the API spawns
     # run-all.js which executes unlighthouse-ci. The lockfile in /reports
     # ensures cron and on-demand runs never execute in parallel.
+    labels:
+      "wud.watch": "false"
     build: .
     image: unlighthouse-runner:local
     pull_policy: build
