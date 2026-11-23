@@ -171,22 +171,22 @@ Mounted as a volume — changes are picked up on next invocation. **No rebuild n
 
 Also mounted as a volume — read on next `unlighthouse-ci` call. **No rebuild needed.**
 
-### Add npm dependencies for the scripts
+### Update scanner dependencies
 
-`node_modules` lives in the image, so a rebuild **is** required:
+The Dockerfile pins the Node image, Unlighthouse CLI, Puppeteer Core and Supercronic.
+For a Supercronic update, also replace the SHA-256 checksum with the one for the
+new Linux amd64 release. Run `npm install` in `scripts/` when changing the YAML
+parser and commit both `package.json` and `package-lock.json`.
 
-```bash
-docker compose build unlighthouse-runner
-docker compose up -d unlighthouse-runner
-```
-
-### Update Unlighthouse itself
-
-`@unlighthouse/cli@latest` is pinned in the Dockerfile. Pull a newer version:
+With the supplied Compose file, wait for a running scan to finish. Rebuild the
+shared image and recreate both consumers so their anonymous dependency volumes
+are populated from the new image:
 
 ```bash
 docker compose build --no-cache unlighthouse-runner
-docker compose up -d unlighthouse-runner
+docker compose up -d --no-build --pull never --force-recreate --renew-anon-volumes unlighthouse-runner unlighthouse-api
+docker compose exec unlighthouse-runner npm --prefix /app/scripts ls --depth=0
+docker compose exec unlighthouse-api npm --prefix /app/scripts ls --depth=0
 ```
 
 ### Prune old reports

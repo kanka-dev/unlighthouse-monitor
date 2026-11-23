@@ -4,10 +4,15 @@
  */
 
 const fs = require("fs");
-const yaml = require("js-yaml");
+const { loadAll, CORE_SCHEMA, mergeTag } = require("js-yaml");
+
+const siteSchema = CORE_SCHEMA.withTags(mergeTag);
 
 function loadSites(file) {
-  const config = yaml.load(fs.readFileSync(file, "utf8")) || {};
+  // Keep empty files and YAML merge keys working as they did with js-yaml 4.
+  const documents = loadAll(fs.readFileSync(file, "utf8"), { schema: siteSchema });
+  if (documents.length > 1) throw new Error("The site configuration must contain a single YAML document.");
+  const config = documents[0] || {};
   const defaults = config.defaults || {};
   const sites = config.sites || [];
 
