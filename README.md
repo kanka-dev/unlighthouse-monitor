@@ -153,6 +153,8 @@ Pick **one** of the example overrides (see _Quick start_ above) and copy it to `
 
 ## Mattermost notifications
 
+The Mattermost table and dashboard both color each displayed category average using the [Lighthouse score ranges](https://developer.chrome.com/docs/lighthouse/performance/performance-scoring#color-coding). Scores of 90–100 are green, 50–89 orange, and 0–49 red. A missing score has a neutral indicator. The thresholds in `sites.yml` control alerts separately. For example, a performance score of 86 is orange and meets a site target of 80.
+
 After every run, one summary message is posted. If any threshold is breached, an alert emoji and a details block listing the violations are added, with a deep link to the full HTML report per affected site.
 
 ![Mattermost notification](docs/unlighthouse-monitor-mattermost-example.png)

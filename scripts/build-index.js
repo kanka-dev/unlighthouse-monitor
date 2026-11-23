@@ -9,6 +9,7 @@
 const fs = require("fs");
 const path = require("path");
 const { loadSites } = require("./load-sites");
+const { ratings, scoreRating } = require("./score-rating");
 
 const REPORTS_DIR = process.env.REPORTS_DIR || "/reports";
 const SITES_FILE = process.env.SITES_FILE || "/app/sites.yml";
@@ -64,16 +65,9 @@ function aggregateScores(ci) {
   return { avg, min, pages: pages.length };
 }
 
-function color(score, threshold) {
-  if (score == null) return "#6b7280";
-  if (score >= threshold) return "#16a34a";
-  if (score >= threshold - 10) return "#eab308";
-  return "#dc2626";
-}
-
-function badge(score, threshold, worst) {
+function badge(score, worst) {
   const val = score == null ? "—" : score;
-  const main = `<span class="badge" style="background:${color(score, threshold)}">${val}</span>`;
+  const main = `<span class="badge" style="background:${scoreRating(score).color}">${val}</span>`;
   if (worst != null && worst !== score) {
     return `${main}<div class="worst" title="Worst single page">min ${worst}</div>`;
   }
@@ -195,10 +189,9 @@ function render(rows) {
     </div>
   </div>
   <div class="legend">
-    <span><span class="dot" style="background:#16a34a"></span>&ge; threshold</span>
-    <span><span class="dot" style="background:#eab308"></span>&ge; threshold &minus; 10</span>
-    <span><span class="dot" style="background:#dc2626"></span>below threshold</span>
-    <span><span class="dot" style="background:#6b7280"></span>no data</span>
+    ${Object.values(ratings).map(({ color, label }) =>
+      `<span><span class="dot" style="background:${color}"></span>${label}</span>`
+    ).join("\n    ")}
   </div>
   <div class="actions">
     <button class="btn btn-primary" data-run-all type="button" title="Run Lighthouse for all configured sites now">
@@ -224,8 +217,6 @@ function render(rows) {
 
   let body = "";
   for (const r of rows) {
-    const t = r.site.thresholds || {};
-    const get = (k, d = 80) => t[k] || d;
     const runBtn = `<button class="btn btn-sm" data-run-site="${esc(r.safe)}" type="button" title="Run Lighthouse for ${esc(r.site.name)} only">▶ Run</button>`;
     if (!r.latest) {
       body += `<tr>
@@ -247,10 +238,10 @@ function render(rows) {
     body += `<tr>
       <td>${siteCell(r.site)}</td>
       <td>${esc(r.latestDate)}<div class="muted" style="font-size:.75rem">${r.latest.pages} pages</div></td>
-      <td>${badge(a.performance, get("performance"), m.performance)}</td>
-      <td>${badge(a.accessibility, get("accessibility"), m.accessibility)}</td>
-      <td>${badge(a["best-practices"], get("best-practices"), m["best-practices"])}</td>
-      <td>${badge(a.seo, get("seo"), m.seo)}</td>
+      <td>${badge(a.performance, m.performance)}</td>
+      <td>${badge(a.accessibility, m.accessibility)}</td>
+      <td>${badge(a["best-practices"], m["best-practices"])}</td>
+      <td>${badge(a.seo, m.seo)}</td>
       <td><a href="./${esc(r.safe)}/latest/">Open →</a>${history}</td>
       <td>${runBtn}</td>
     </tr>`;

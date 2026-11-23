@@ -10,6 +10,7 @@
 const fs = require("fs");
 const path = require("path");
 const { loadSites } = require("./load-sites");
+const { scoreRating } = require("./score-rating");
 
 const REPORTS_DIR = process.env.REPORTS_DIR || "/reports";
 const SITES_FILE = process.env.SITES_FILE || "/app/sites.yml";
@@ -58,13 +59,6 @@ function aggregate(ci) {
   return { avg, min, pages: pages.length };
 }
 
-function emoji(score, threshold) {
-  if (score == null) return "⚪";
-  if (score >= threshold) return "🟢";
-  if (score >= threshold - 10) return "🟡";
-  return "🔴";
-}
-
 async function main() {
   const sites = loadSites(SITES_FILE);
   const date = today();
@@ -90,7 +84,7 @@ async function main() {
         siteBreaches.push(`${SHORT[c]} Ø${avg[c]} (min ${min[c]}) < ${th(c)}`);
       }
     }
-    rows.push({ name: site.name, url: site.url, safe, avg, min, t, pages, siteBreaches });
+    rows.push({ name: site.name, url: site.url, safe, avg, min, pages });
     if (siteBreaches.length) {
       breaches.push(`**${site.name}** (${site.url}) — ${siteBreaches.join(", ")}\n→ [Report](${PUBLIC_URL}/${safe}/latest/)`);
     }
@@ -113,7 +107,7 @@ async function main() {
     const c = (k) => {
       const a = r.avg[k];
       const m = r.min[k];
-      const e = emoji(a, r.t[k] || 80);
+      const e = scoreRating(a).emoji;
       if (a == null) return `${e} —`;
       return m != null && m !== a ? `${e} ${a} _(min ${m})_` : `${e} ${a}`;
     };
